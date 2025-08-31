@@ -11,9 +11,13 @@ import {
   orderBy,
   limit,
   Timestamp,
-  increment as firestoreIncrement
+  increment as firestoreIncrement,
+  writeBatch
 } from 'firebase/firestore';
 import { notificationService } from './notificationService';
+import * as Linking from 'expo-linking';
+import * as Sharing from 'expo-sharing';
+import { Alert } from 'react-native';
 
 export interface RideShareData {
   id: string;
@@ -70,7 +74,7 @@ export interface SharingAnalytics {
   shareTypeBreakdown: Array<{ type: string; count: number }>;
 }
 
-class SharingService {
+class RideSharingService {
   private activeShares: Map<string, RideShareData> = new Map();
   private shareListener: (() => void) | null = null;
 
@@ -161,7 +165,23 @@ class SharingService {
       },
     };
 
-    return await this.createRideShare(shareData);
+    const shareId = await this.createRideShare(shareData);
+
+    // Send WhatsApp message
+    try {
+      const message = encodeURIComponent(shareContent.message);
+      const whatsappUrl = `whatsapp://send?text=${message}`;
+      
+      if (await Linking.canOpenURL(whatsappUrl)) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        Alert.alert('WhatsApp not available', 'Please install WhatsApp to share via this method.');
+      }
+    } catch (error) {
+      console.error('Error opening WhatsApp:', error);
+    }
+
+    return shareId;
   }
 
   // Share ride via SMS
@@ -187,7 +207,23 @@ class SharingService {
       },
     };
 
-    return await this.createRideShare(shareData);
+    const shareId = await this.createRideShare(shareData);
+
+    // Send SMS
+    try {
+      const message = encodeURIComponent(shareContent.message);
+      const smsUrl = `sms:${recipients.join(',')}?body=${message}`;
+      
+      if (await Linking.canOpenURL(smsUrl)) {
+        await Linking.openURL(smsUrl);
+      } else {
+        Alert.alert('SMS not available', 'Please use your device\'s SMS app to send the message.');
+      }
+    } catch (error) {
+      console.error('Error opening SMS:', error);
+    }
+
+    return shareId;
   }
 
   // Share ride via link
@@ -213,7 +249,23 @@ class SharingService {
       },
     };
 
-    return await this.createRideShare(shareData);
+    const shareId = await this.createRideShare(shareData);
+
+    // Share link using device sharing
+    try {
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(rideInfo.shareLink, {
+          mimeType: 'text/plain',
+          dialogTitle: 'Share Ride Details',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'Please copy the link manually.');
+      }
+    } catch (error) {
+      console.error('Error sharing link:', error);
+    }
+
+    return shareId;
   }
 
   // Generate share content based on type
@@ -496,7 +548,7 @@ class SharingService {
       );
 
       const snapshot = await getDocs(q);
-      const batch = db.batch();
+      const batch = writeBatch(db);
 
       snapshot.forEach((doc) => {
         batch.update(doc.ref, { 
@@ -536,8 +588,6 @@ class SharingService {
   }
 }
 
-
-
 // Export singleton instance
-export const sharingService = new SharingService();
-export default sharingService;
+export const rideSharingService = new RideSharingService();
+export default rideSharingService;

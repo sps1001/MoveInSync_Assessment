@@ -78,6 +78,17 @@ const LandingPage = () => {
             Monitor all rides and system status
           </Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.adminSetupCard, isDarkMode && styles.darkAdminSetupCard]} 
+          onPress={() => navigation.navigate('AdminSetup')}
+        >
+          <Text style={[styles.adminSetupIcon, isDarkMode && styles.darkText]}>🔧</Text>
+          <Text style={[styles.adminSetupText, isDarkMode && styles.darkText]}>Admin Setup</Text>
+          <Text style={[styles.adminSetupDescription, isDarkMode && styles.darkText]}>
+            Create admin user accounts
+          </Text>
+        </TouchableOpacity>
       </View>
     </LinearGradient>
   );
@@ -177,6 +188,40 @@ const styles = StyleSheet.create({
     color: '#f59e0b',
   },
   adminDescription: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#64748b',
+  },
+  adminSetupCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    width: '60%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    marginTop: 10,
+  },
+  darkAdminSetupCard: {
+    backgroundColor: '#2a2a2a',
+    borderColor: '#3b82f6',
+  },
+  adminSetupIcon: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  adminSetupText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#3b82f6',
+  },
+  adminSetupDescription: {
     fontSize: 12,
     textAlign: 'center',
     color: '#64748b',

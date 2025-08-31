@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { useTheme } from '../service/themeContext';
 import { db, auth } from '../service/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
 interface RideData {
   id: string;
@@ -67,6 +67,37 @@ const RideHistory = () => {
 
   useEffect(() => {
     fetchRideHistory();
+    
+    // Set up real-time listener for ride history updates
+    const user = auth.currentUser;
+    if (user) {
+      const q = query(collection(db, 'history'), where('userID', '==', user.uid));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const rides: RideData[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          rides.push({
+            id: doc.id,
+            date: data.date || data.timestamp?.toDate?.()?.toDateString() || 'N/A',
+            time: data.time || data.timestamp?.toDate?.()?.toTimeString() || 'N/A',
+            from: data.from || 'N/A',
+            to: data.to || 'N/A',
+            driverName: data.driverName || 'N/A',
+            amount: data.amount || '0',
+            status: data.status || 'N/A',
+            type: data.type || 'individual',
+            rideID: data.rideID || data.rideId || doc.id,
+            userID: data.userID || data.userId || 'N/A'
+          } as RideData);
+        });
+        
+        rides.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+        setRideData(rides);
+        setLoading(false);
+      });
+      
+      return () => unsubscribe();
+    }
   }, []);
 
   const formatDateTime = (dateStr: string, timeStr: string) => {

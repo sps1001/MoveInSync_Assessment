@@ -9,7 +9,7 @@ import { ref, push, set ,get,update, onValue, off} from 'firebase/database';
 import { auth, db, realtimeDb } from '../service/firebase';
 import { useTheme } from '../service/themeContext';
 import * as Location from 'expo-location';
-import { navigate } from 'expo-router/build/global-state/routing';
+// import { navigate } from 'expo-router/build/global-state/routing';
 import locationTrackingService from '../service/locationTrackingService';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -133,11 +133,12 @@ const RideRequests = () => {
         const filtered: any[] = [];
   
         Object.entries(data).forEach(([key, value]: [string, any]) => {
-          // Include both requested and completed rides
+          // Only show requested rides that haven't been accepted
           if (
-            (value.status === 'requested' || value.status === 'completed') &&
+            value.status === 'requested' &&
             value.startLat &&
-            value.startLong
+            value.startLong &&
+            !value.driverAccepted // Ensure ride hasn't been accepted by any driver
           ) {
             const distance = haversineDistance(
               driverLat,
@@ -326,6 +327,33 @@ const RideRequests = () => {
         driverAccepted: true,
         acceptedAt: new Date().toISOString(),
       });
+
+      // ✅ Add to driver history in Firestore
+      try {
+        await addDoc(collection(db, 'driverHistory'), {
+          driverId: uid,
+          rideId: rideId,
+          from: rideData.from,
+          to: rideData.to,
+          startLat: rideData.startLat,
+          startLong: rideData.startLong,
+          endLat: rideData.endLat,
+          endLong: rideData.endLong,
+          date: rideData.date,
+          time: rideData.time,
+          amount: rideData.amount,
+          distance: rideData.distance,
+          duration: rideData.duration,
+          status: 'accepted',
+          userName: rideData.userName,
+          timestamp: new Date(),
+          driverName: driverName,
+          vehicleInfo: vehicleInfo || {}
+        });
+        console.log('Ride added to driver history');
+      } catch (error) {
+        console.error('Error saving to driver history:', error);
+      }
 
       // ✅ Start location tracking for this ride
       try {

@@ -4,7 +4,7 @@ import {
   Alert, ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { collection, query, where, getDocs, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, writeBatch, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../service/firebase';
 import { useTheme } from '../service/themeContext';
 
@@ -18,6 +18,37 @@ const DriverRideHistory = () => {
   
   useEffect(() => {
     fetchRideHistory();
+    
+    // Set up real-time listener for driver ride history updates
+    if (auth.currentUser) {
+      const q = query(
+        collection(db, 'driverHistory'),
+        where('driverId', '==', auth.currentUser.uid)
+      );
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const historyItems = [];
+        
+        snapshot.forEach((doc) => {
+          historyItems.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        // Sort by date (newest first)
+        historyItems.sort((a, b) => {
+          const dateA = new Date(a.date + ' ' + a.time);
+          const dateB = new Date(b.date + ' ' + b.time);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        setRideHistory(historyItems);
+        setLoading(false);
+      });
+      
+      return () => unsubscribe();
+    }
   }, []);
   
   const fetchRideHistory = async () => {

@@ -45,7 +45,7 @@ const RideBooking = () => {
   const [requestId, setRequestId] = useState(""); // State to hold the request ID
   const [calculatedAmount, setCalculatedAmount] = useState<number | null>(null);
   const [showAmount, setShowAmount] = useState(false);
-
+  const [canCalculateFare, setCanCalculateFare] = useState(false);
 
 
   const getCurrentLocation = async () => {
@@ -191,6 +191,7 @@ const RideBooking = () => {
     }
   
     setIsSelectingStartSuggestion(false); // reset
+    checkCanCalculateFare();
   };
   
   const handleEndAddressChange = async (text: string) => {
@@ -207,6 +208,46 @@ const RideBooking = () => {
     }
   
     setIsSelectingEndSuggestion(false);
+    checkCanCalculateFare();
+  };
+
+  const checkCanCalculateFare = () => {
+    const canCalculate = startLocation && endLocation && startLat && startLong && endLat && endLong;
+    setCanCalculateFare(!!canCalculate);
+    if (!canCalculate) {
+      setCalculatedAmount(null);
+      setShowAmount(false);
+    }
+  };
+
+  const calculateFare = async () => {
+    if (!canCalculateFare) return;
+
+    try {
+      const resp1 = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${startLat},${startLong}&destination=${endLat},${endLong}&departure_time=now&key=${GOOGLE_MAPS_API_KEY}`);
+      const data1 = await resp1.json();
+      
+      if (data1.routes && data1.routes.length > 0) {
+        const duration = data1.routes[0].legs[0].duration.value;
+        const trafficDuration = data1.routes[0].legs[0].duration_in_traffic?.value || duration;
+        const trafficFactor = trafficDuration / duration;
+        const dist = haversineDistance(startLat, startLong, endLat, endLong);
+        const currentHour = new Date().getHours();
+        const timeOfDayFactor = 
+          (currentHour >= 8 && currentHour <= 10) || (currentHour >= 18 && currentHour <= 21)
+          ? 1.2 // Rush hour
+          : 1.0;
+        const amt: Number = calculateDynamicFare(dist, duration, trafficFactor, timeOfDayFactor);
+        
+        setCalculatedAmount(Number(amt));
+        setShowAmount(true);
+      } else {
+        Alert.alert('Error', 'Could not calculate route. Please check your locations.');
+      }
+    } catch (error) {
+      console.error('Error calculating fare:', error);
+      Alert.alert('Error', 'Failed to calculate fare. Please try again.');
+    }
   };
 
   const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -454,7 +495,7 @@ const RideBooking = () => {
       )}
 
       {/* Show calculated amount */}
-      {calculatedAmount && (
+      {calculatedAmount && showAmount && (
         <View style={[styles.amountContainer, isDarkMode && styles.darkAmountContainer]}>
           <Text style={[styles.amountLabel, isDarkMode && styles.darkText]}>
             Estimated Fare:
@@ -463,6 +504,16 @@ const RideBooking = () => {
             ₹{calculatedAmount}
           </Text>
         </View>
+      )}
+
+      {/* Show Estimated Fare Button */}
+      {canCalculateFare && !showAmount && (
+        <TouchableOpacity
+          style={styles.estimateFareButton}
+          onPress={calculateFare}
+        >
+          <Text style={styles.buttonText}>💰 Calculate Estimated Fare</Text>
+        </TouchableOpacity>
       )}
 
       <View style={{ marginTop: 10 }}>
@@ -634,6 +685,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#059669',
+  },
+  estimateFareButton: {
+    backgroundColor: '#f59e0b',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10,
   },
 });
 

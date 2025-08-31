@@ -1,157 +1,224 @@
-# RideWise - Smart Ride-Sharing Application
+# RideWise - Complete Ride-Sharing Application
 
-## Overview
-RideWise is a comprehensive ride-sharing application built with React Native and Firebase, featuring real-time ride matching, carpooling groups, and an admin dashboard.
+A comprehensive ride-sharing application built with React Native, Firebase, and real-time location tracking.
 
-## Features
-- 🚗 **Real-time Ride Booking**: Instant ride requests with dynamic pricing
-- 👥 **Carpooling Groups**: Create and join ride-sharing groups
-- 🚘 **Driver Management**: Driver verification and ride assignment
-- 📊 **Admin Dashboard**: Monitor all rides and system statistics
-- 🌙 **Dark/Light Theme**: Customizable user interface
-- 📍 **Location Services**: Google Maps integration with real-time tracking
-- 🔐 **Authentication**: Secure user authentication with Firebase Auth
+## 🚀 Features
 
-## Tech Stack
-- **Frontend**: React Native with TypeScript
+### Core Functionality
+- **User Authentication**: Secure login/signup with Firebase Auth
+- **Ride Booking**: Complete ride booking flow with location selection
+- **Driver Management**: Driver registration, verification, and dashboard
+- **Real-time Tracking**: Live location updates during rides
+- **Fare Calculation**: Dynamic fare calculation based on distance, time, and traffic
+- **Ride History**: Complete ride history for both users and drivers
+- **Notifications**: Push notifications for ride updates
+
+### Advanced Features
+- **Geofencing**: Location-based alerts and notifications
+- **Companion Tracking**: Allow trusted contacts to track rides
+- **Ride Sharing**: Share ride details via multiple platforms
+- **Feedback System**: Comprehensive rating and feedback system
+- **Analytics**: Detailed analytics for drivers and admins
+- **Dark Mode**: Theme support with automatic switching
+
+## 🛠️ Technology Stack
+
+- **Frontend**: React Native 0.79.5
 - **Backend**: Firebase (Firestore + Realtime Database)
-- **Authentication**: Firebase Authentication
-- **Maps**: Google Maps API
-- **State Management**: React Context API
-- **Navigation**: React Navigation v6
+- **Authentication**: Firebase Auth
+- **Location Services**: Expo Location + Google Maps API
+- **Notifications**: Expo Notifications
+- **State Management**: React Context + Hooks
+- **Navigation**: React Navigation 7
 
-## Prerequisites
-- Node.js (v16 or higher)
+## 📱 Installation & Setup
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
 - Expo CLI
-- Firebase project with Firestore and Realtime Database enabled
-- Google Maps API key
+- Android Studio (for Android development)
+- Xcode (for iOS development, macOS only)
 
-## Environment Variables
+### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd MoveInSync_Assessment
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+# or
+yarn install
+```
+
+### 3. Environment Configuration
 Create a `.env` file in the root directory:
-
 ```env
+# Firebase Configuration
 API_KEY=your_firebase_api_key
 AUTH_DOMAIN=your_project.firebaseapp.com
 PROJECT_ID=your_project_id
 STORAGE_BUCKET=your_project.appspot.com
 MESSAGING_SENDER_ID=your_sender_id
 APP_ID=your_app_id
-DATABSE_URL=your_realtime_db_url
+DATABASE_URL=https://your_project-default-rtdb.firebaseio.com
+
+# Google Maps API Key
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
-## Installation
+### 4. Firebase Setup
+1. Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Authentication, Firestore, and Realtime Database
+3. Set up Firestore security rules
+4. Configure Realtime Database rules
+5. Add your app to the project
 
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd RideWise
-```
+### 5. Google Maps Setup
+1. Get a Google Maps API key from [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable Maps, Directions, and Geocoding APIs
+3. Add the API key to your `.env` file
 
-2. **Install dependencies**
+### 6. Run the Application
 ```bash
-npm install
-```
-
-3. **Start the development server**
-```bash
+# Start the development server
 npm start
-```
+# or
+expo start
 
-4. **Run on device/simulator**
-```bash
-# Android
+# Run on Android
 npm run android
 
-# iOS
+# Run on iOS
 npm run ios
 ```
 
-## Project Structure
-
-```
-src/
-├── components/          # React Native components
-│   ├── AdminDashboard.tsx
-│   ├── Dashboard.tsx
-│   ├── RideBooking.tsx
-│   ├── RideHistory.tsx
-│   └── ... (other components)
-├── service/            # Firebase and utility services
-│   ├── firebase.ts     # Firebase configuration
-│   ├── auth.js         # Authentication functions
-│   └── themeContext.tsx # Theme management
-└── assets/             # Images and static files
-```
-
-## Database Structure
+## 🗄️ Database Structure
 
 ### Firestore Collections
 - **users**: User profiles and preferences
 - **drivers**: Driver information and verification status
-- **history**: Complete ride records
-- **groups**: Carpooling groups
-- **members**: Group membership details
+- **history**: Complete ride history for users
+- **driverHistory**: Complete ride history for drivers
+- **geofences**: Location-based alerts
+- **notifications**: Push notification data
+- **feedback**: User ratings and feedback
+- **rideShares**: Ride sharing analytics
 
 ### Realtime Database
-- **rideRequests**: Live ride requests for real-time matching
+- **rideRequests**: Active ride requests and status
+- **rideTracking**: Real-time location tracking data
 
-## Key Components
+## 🔄 Real-time Features
 
-### 1. LandingPage
-Entry point with login/signup options
+### Ride Request Flow
+1. User books a ride → Creates entry in Realtime DB
+2. Driver sees request → Updates status to 'accepted'
+3. Location tracking starts → Real-time updates
+4. Ride completion → Updates both databases
 
-### 2. Dashboard
-Main user interface with ride booking, carpooling, and ride history
+### Real-time Updates
+- **Firestore**: Uses `onSnapshot` for real-time document updates
+- **Realtime DB**: Uses `onValue` for real-time data changes
+- **Location Tracking**: Updates every 10 seconds during active rides
 
-### 3. RideBooking
-Ride request creation with location selection and dynamic pricing
+## 🧪 Testing
 
-### 4. AdminDashboard
-Administrative interface for monitoring system activity
+### Database Functionality Test
+Run the comprehensive test script:
+```bash
+node test-database.js
+```
 
-### 5. CarpoolScreen
-Group-based ride sharing functionality
+This script tests:
+- Firebase Authentication
+- Firestore Operations
+- Realtime Database Operations
+- Real-time Listeners
+- Collection Verification
 
-## Data Flow
+### Manual Testing Checklist
+- [ ] User registration and login
+- [ ] Ride booking with location selection
+- [ ] Driver registration and verification
+- [ ] Ride request acceptance
+- [ ] Real-time location tracking
+- [ ] Ride completion
+- [ ] History updates
+- [ ] Notifications
 
-1. **User Authentication**: Firebase Auth handles user login/signup
-2. **Ride Creation**: Users create ride requests in RideBooking
-3. **Real-time Matching**: Ride requests are stored in Realtime Database
-4. **Driver Assignment**: Drivers can view and accept nearby requests
-5. **History Tracking**: All rides are saved to Firestore for analytics
+## 🐛 Troubleshooting
 
-## Firebase Setup
+### Common Issues
 
-1. **Create Firebase Project**
-   - Go to [Firebase Console](https://console.firebase.google.com)
-   - Create new project
-   - Enable Authentication, Firestore, and Realtime Database
+#### 1. Estimated Fare Button Not Showing
+- Ensure both start and end locations are set
+- Check Google Maps API key configuration
+- Verify location permissions
 
-2. **Configure Authentication**
-   - Enable Email/Password authentication
-   - Set up security rules
+#### 2. Ride Requests Not Appearing
+- Check driver availability status
+- Verify driver verification status
+- Check location permissions
+- Ensure driver is within 25km radius
 
-3. **Configure Firestore**
-   - Create database in test mode
-   - Set up security rules
+#### 3. Real-time Updates Not Working
+- Check Firebase configuration
+- Verify internet connection
+- Check Firestore security rules
+- Ensure proper listener cleanup
 
-4. **Configure Realtime Database**
-   - Create database
-   - Set up security rules
+#### 4. Location Tracking Issues
+- Check location permissions
+- Verify GPS is enabled
+- Check device location services
+- Ensure proper error handling
 
-## Security Rules
+### Debug Mode
+Enable debug logging by checking console output for:
+- 🔄 Real-time updates
+- 🚗 Location tracking
+- 📍 Geofence triggers
+- 🔔 Notification delivery
+
+## 📊 Performance Optimization
+
+### Database Optimization
+- Use compound queries for complex filtering
+- Implement pagination for large datasets
+- Use batch operations for multiple updates
+- Optimize real-time listeners
+
+### Location Optimization
+- Adjust tracking frequency based on ride status
+- Implement geofencing for efficient location checks
+- Use background location updates sparingly
+- Cache location data when appropriate
+
+## 🔒 Security Considerations
 
 ### Firestore Rules
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users can only access their own data
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+    
+    // Drivers can only access their own data
+    match /drivers/{driverId} {
+      allow read, write: if request.auth != null && request.auth.uid == driverId;
+    }
+    
+    // Ride history access control
     match /history/{document} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null && 
+        (resource.data.userID == request.auth.uid || 
+         resource.data.driverId == request.auth.uid);
     }
   }
 }
@@ -162,67 +229,80 @@ service cloud.firestore {
 {
   "rules": {
     "rideRequests": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      "$rideId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "rideTracking": {
+      "$rideId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
     }
   }
 }
 ```
 
-## Common Issues & Solutions
+## 🚀 Deployment
 
-### 1. Navigation Errors
-- Ensure all screens are registered in `App.tsx`
-- Check navigation parameter types
-
-### 2. Firebase Connection Issues
-- Verify environment variables
-- Check Firebase project configuration
-- Ensure internet connectivity
-
-### 3. Location Permission Issues
-- Request location permissions explicitly
-- Handle permission denial gracefully
-
-## Building for Production
-
-1. **Configure app.json**
-   - Update app name, version, and bundle identifier
-   - Configure permissions and features
-
-2. **Build APK/IPA**
+### Expo Build
 ```bash
-# Android
+# Build for Android
 expo build:android
 
-# iOS
+# Build for iOS
 expo build:ios
 ```
 
-## Contributing
+### App Store Deployment
+1. Configure app.json with proper metadata
+2. Set up code signing certificates
+3. Build production APK/IPA
+4. Submit to respective app stores
+
+## 📈 Monitoring & Analytics
+
+### Firebase Analytics
+- Track user engagement
+- Monitor ride completion rates
+- Analyze driver performance
+- Track app crashes and errors
+
+### Custom Metrics
+- Ride success rates
+- Driver response times
+- User satisfaction scores
+- Geographic usage patterns
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create feature branch
-3. Make changes
-4. Test thoroughly
-5. Submit pull request
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Support
+## 🆘 Support
 
 For support and questions:
 - Create an issue in the repository
-- Contact the development team
-- Check the documentation
+- Check the troubleshooting section
+- Review Firebase documentation
+- Consult React Native documentation
 
-## Roadmap
+## 🔄 Version History
 
-- [ ] Push notifications
-- [ ] Payment integration
-- [ ] Driver rating system
-- [ ] Advanced analytics
-- [ ] Multi-language support
-- [ ] Offline mode
+- **v1.0.0**: Initial release with core functionality
+- **v1.1.0**: Added real-time updates and improved error handling
+- **v1.2.0**: Enhanced location tracking and geofencing
+- **v1.3.0**: Added companion tracking and ride sharing
+- **v1.4.0**: Improved performance and security
+
+---
+
+**Note**: This application requires proper Firebase and Google Maps API setup to function correctly. Ensure all environment variables and API keys are properly configured before running the application.

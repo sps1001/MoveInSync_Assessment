@@ -62,6 +62,8 @@ class LocationTrackingService {
       console.log('🚗 Started driver location tracking for ride:', rideId);
     } catch (error) {
       console.error('Error starting location tracking:', error);
+      this.isTracking = false;
+      this.activeRideId = null;
       throw error;
     }
   }

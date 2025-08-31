@@ -42,6 +42,15 @@ const RideWaiting = () => {
           }
         }
         
+        // Update ride status based on driver actions
+        if (rideData.status === 'in_progress') {
+          setRideStatus('in_progress');
+        } else if (rideData.status === 'completed') {
+          setRideStatus('completed');
+        } else if (rideData.status === 'cancelled') {
+          setRideStatus('cancelled');
+        }
+        
         setLoading(false);
       }
     });

@@ -6,6 +6,8 @@ import { realtimeDb } from '../service/firebase';
 import { useTheme } from '../service/themeContext';
 import locationTrackingService from '../service/locationTrackingService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../service/firebase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -94,6 +96,48 @@ const DriverRouteScreen = () => {
         rideCompletedAt: new Date().toISOString(),
         rideCompleted: true,
       });
+
+      // ✅ Update driver history in Firestore
+      try {
+        const driverHistoryQuery = query(
+          collection(db, 'driverHistory'),
+          where('rideId', '==', realtimeId)
+        );
+        const driverHistorySnapshot = await getDocs(driverHistoryQuery);
+        
+        if (!driverHistorySnapshot.empty) {
+          const driverHistoryDoc = driverHistorySnapshot.docs[0];
+          await updateDoc(doc(db, 'driverHistory', driverHistoryDoc.id), {
+            status: 'completed',
+            completedAt: new Date(),
+            rideCompletedAt: new Date().toISOString(),
+          });
+          console.log('Driver history updated to completed');
+        }
+      } catch (error) {
+        console.error('Error updating driver history:', error);
+      }
+
+      // ✅ Update user history in Firestore
+      try {
+        const userHistoryQuery = query(
+          collection(db, 'history'),
+          where('rideID', '==', realtimeId)
+        );
+        const userHistorySnapshot = await getDocs(userHistoryQuery);
+        
+        if (!userHistorySnapshot.empty) {
+          const userHistoryDoc = userHistorySnapshot.docs[0];
+          await updateDoc(doc(db, 'history', userHistoryDoc.id), {
+            status: 'completed',
+            completedAt: new Date(),
+            rideCompletedAt: new Date().toISOString(),
+          });
+          console.log('User history updated to completed');
+        }
+      } catch (error) {
+        console.error('Error updating user history:', error);
+      }
 
       // Stop location tracking
       locationTrackingService.stopTracking();

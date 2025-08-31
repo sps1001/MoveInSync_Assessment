@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, initializeAuth, getReactNativePersistence, Auth } from "firebase/auth";
+import { getAuth, initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getDatabase } from "firebase/database";
@@ -17,30 +17,28 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
+const app = initializeApp(firebaseConfig);
+
+// Initialize Auth with proper error handling
+let auth;
 try {
-  if (!global.firebaseApp) {
-    app = initializeApp(firebaseConfig);
-    global.firebaseApp = app;
-  } else {
-    app = global.firebaseApp;
+  // First try to get existing auth instance
+  auth = getAuth(app);
+} catch (error) {
+  console.log('getAuth failed, trying initializeAuth:', error);
+  try {
+    // If getAuth fails, initialize new auth with persistence
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+  } catch (initError) {
+    console.error('Both getAuth and initializeAuth failed:', initError);
+    // Last resort: try to get auth without persistence
+    auth = getAuth(app);
   }
-} catch (error) {
-  console.error('Firebase initialization error:', error);
-  throw error;
 }
 
-// Initialize Auth with persistence
-let auth: Auth;
-try {
-  auth = getAuth(app);
-} catch (error) {
-  console.error('Auth initialization error:', error);
-  // Fallback to basic auth initialization
-  auth = getAuth(app);
-}
-
-// Export Firebase services
+// Initialize other Firebase services
 const db = getFirestore(app);
 const storage = getStorage(app);
 const realtimeDb = getDatabase(app);

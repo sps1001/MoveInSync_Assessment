@@ -1,17 +1,7 @@
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import { auth, db } from './firebase';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  doc, 
-  query, 
-  where, 
-  onSnapshot,
-  getDocs 
-} from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -22,311 +12,209 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export interface NotificationData {
-  id: string;
-  userId: string;
-  type: 'ride_started' | 'ride_completed' | 'geofence_alert' | 'companion_linked' | 'feedback_request';
-  title: string;
-  body: string;
-  data?: any;
-  read: boolean;
-  createdAt: Date;
-  expiresAt?: Date;
-}
-
-export interface PushNotificationPayload {
-  to: string;
-  notification: {
-    title: string;
-    body: string;
-  };
-  data?: any;
-  priority?: 'high' | 'normal';
-}
-
 class NotificationService {
   private expoPushToken: string | null = null;
-  private notificationListener: Notifications.Subscription | null = null;
-  private responseListener: Notifications.Subscription | null = null;
+  private isInitialized: boolean = false;
 
   constructor() {
-    this.setupNotificationListeners();
+    this.initializeService();
   }
 
-  // Setup notification listeners
-  private setupNotificationListeners() {
-    this.notificationListener = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification received:', notification);
-    });
-
-    this.responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification response:', response);
-      this.handleNotificationResponse(response);
-    });
-  }
-
-  // Handle notification tap
-  private handleNotificationResponse(response: Notifications.NotificationResponse) {
-    const data = response.notification.request.content.data;
-    if (data?.type === 'ride_started') {
-      // Navigate to ride tracking
-      console.log('Navigate to ride tracking');
-    } else if (data?.type === 'ride_completed') {
-      // Navigate to feedback
-      console.log('Navigate to feedback');
-    }
-  }
-
-  // Register for push notifications
-  async registerForPushNotifications(): Promise<string | null> {
-    if (!Device.isDevice) {
-      console.log('Must use physical device for Push Notifications');
-      return null;
-    }
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
-      return null;
-    }
+  async initializeService() {
+    if (this.isInitialized) return;
 
     try {
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: 'sps1020/RideWise', // Updated with your Expo project ID
-      });
+      // Request permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
       
-      this.expoPushToken = token.data;
-      console.log('Expo push token:', token.data);
-      
-      // Save token to user's document
-      if (auth.currentUser) {
-        await this.savePushToken(auth.currentUser.uid, token.data);
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
       }
       
-      return token.data;
+      if (finalStatus !== 'granted') {
+        console.log('Notification permissions not granted');
+        return;
+      }
+
+      // Set up notification channels for Android
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+
+        await Notifications.setNotificationChannelAsync('ride-updates', {
+          name: 'Ride Updates',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+          sound: 'default',
+        });
+
+        await Notifications.setNotificationChannelAsync('geofence', {
+          name: 'Geofence Alerts',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 500, 250, 500],
+          lightColor: '#FF00FF00',
+          sound: 'default',
+        });
+      }
+
+      this.isInitialized = true;
+      console.log('✅ Notification service initialized successfully');
     } catch (error) {
-      console.error('Error getting push token:', error);
-      return null;
+      console.error('❌ Error initializing notification service:', error);
     }
   }
 
-  // Save push token to user document
-  private async savePushToken(userId: string, token: string) {
+  // Send local notification (works in Expo Go)
+  async sendLocalNotification(title: string, body: string, data?: any, channelId: string = 'default') {
     try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        pushToken: token,
-        lastTokenUpdate: new Date(),
+      if (!this.isInitialized) {
+        await this.initializeService();
+      }
+
+      const notificationContent = {
+        title,
+        body,
+        data: data || {},
+        sound: 'default',
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        channelId,
+      };
+
+      await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: null, // Send immediately
       });
+
+      console.log('📱 Local notification sent:', title);
+      return true;
     } catch (error) {
-      console.error('Error saving push token:', error);
+      console.error('❌ Error sending local notification:', error);
+      return false;
     }
   }
 
-  // Send local notification
-  async sendLocalNotification(title: string, body: string, data?: any) {
+  // Send ride update notification
+  async sendRideUpdateNotification(rideId: string, message: string, data?: any) {
+    return this.sendLocalNotification(
+      '🚗 Ride Update',
+      message,
+      { ...data, rideId, type: 'ride-update' },
+      'ride-updates'
+    );
+  }
+
+  // Send geofence notification
+  async sendGeofenceNotification(location: string, message: string) {
+    return this.sendLocalNotification(
+      '📍 Location Alert',
+      message,
+      { type: 'geofence', location },
+      'geofence'
+    );
+  }
+
+  // Send trip completion notification
+  async sendTripCompletionNotification(driverName: string, destination: string) {
+    return this.sendLocalNotification(
+      '✅ Trip Completed',
+      `Your ride with ${driverName} to ${destination} has been completed!`,
+      { type: 'trip-completion' },
+      'ride-updates'
+    );
+  }
+
+  // Send companion notification
+  async sendCompanionNotification(travelerName: string, message: string) {
+    return this.sendLocalNotification(
+      '👥 Companion Update',
+      message,
+      { type: 'companion', travelerName },
+      'ride-updates'
+    );
+  }
+
+  // Schedule notification for future delivery
+  async scheduleNotification(title: string, body: string, triggerDate: Date, data?: any) {
     try {
+      if (!this.isInitialized) {
+        await this.initializeService();
+      }
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title,
           body,
-          data,
-          sound: true,
+          data: data || {},
+          sound: 'default',
         },
-        trigger: null, // Send immediately
+        trigger: {
+          date: triggerDate,
+        },
       });
+
+      console.log('📅 Notification scheduled for:', triggerDate);
+      return true;
     } catch (error) {
-      console.error('Error sending local notification:', error);
+      console.error('❌ Error scheduling notification:', error);
+      return false;
     }
   }
 
-  // Send push notification via FCM
-  async sendPushNotification(userId: string, title: string, body: string, data?: any) {
+  // Cancel all scheduled notifications
+  async cancelAllNotifications() {
     try {
-      // Get user's push token
-      const userDoc = await getDocs(query(collection(db, 'users'), where('uid', '==', userId)));
-      if (userDoc.empty) {
-        console.log('User not found for push notification');
-        return;
-      }
-
-      const userData = userDoc.docs[0].data();
-      const pushToken = userData.pushToken;
-
-      if (!pushToken) {
-        console.log('User has no push token');
-        return;
-      }
-
-      // Send via FCM (you'll need to implement the actual FCM call)
-      // For now, we'll save to notifications collection
-      await this.saveNotificationToDatabase(userId, title, body, data);
-      
-      // Also send local notification for immediate feedback
-      await this.sendLocalNotification(title, body, data);
-      
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      console.log('🗑️ All scheduled notifications cancelled');
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      console.error('❌ Error cancelling notifications:', error);
     }
   }
 
-  // Save notification to database
-  private async saveNotificationToDatabase(userId: string, title: string, body: string, data?: any) {
+  // Get notification permissions status
+  async getNotificationPermissions() {
     try {
-      const notificationData: Omit<NotificationData, 'id'> = {
-        userId,
-        type: data?.type || 'general',
-        title,
-        body,
-        data,
-        read: false,
-        createdAt: new Date(),
-        expiresAt: data?.expiresAt,
-      };
-
-      await addDoc(collection(db, 'notifications'), notificationData);
+      const { status } = await Notifications.getPermissionsAsync();
+      return status;
     } catch (error) {
-      console.error('Error saving notification to database:', error);
+      console.error('❌ Error getting notification permissions:', error);
+      return 'denied';
     }
   }
 
-  // Send ride started notification
-  async sendRideStartedNotification(userId: string, rideData: any) {
-    const title = '🚗 Ride Started!';
-    const body = `Your ride from ${rideData.from} to ${rideData.to} has begun.`;
-    const data = {
-      type: 'ride_started',
-      rideId: rideData.id,
-      from: rideData.from,
-      to: rideData.to,
-    };
-
-    await this.sendPushNotification(userId, title, body, data);
+  // Save notification token to user profile (for future FCM implementation)
+  async saveNotificationToken(userId: string, token: string) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        notificationToken: token,
+        notificationSettings: {
+          rideUpdates: true,
+          geofenceAlerts: true,
+          companionUpdates: true,
+          tripCompletion: true,
+        },
+        lastTokenUpdate: new Date(),
+      });
+      console.log('💾 Notification token saved for user:', userId);
+    } catch (error) {
+      console.error('❌ Error saving notification token:', error);
+    }
   }
 
-  // Send ride completed notification
-  async sendRideCompletedNotification(userId: string, rideData: any) {
-    const title = '✅ Ride Completed!';
-    const body = `Your ride has been completed. Please rate your experience.`;
-    const data = {
-      type: 'ride_completed',
-      rideId: rideData.id,
-      from: rideData.from,
-      to: rideData.to,
-    };
-
-    await this.sendPushNotification(userId, title, body, data);
-  }
-
-  // Send geofence alert notification
-  async sendGeofenceAlertNotification(userId: string, location: string) {
-    const title = '📍 Approaching Destination!';
-    const body = `You're approaching ${location}. Get ready to arrive.`;
-    const data = {
-      type: 'geofence_alert',
-      location,
-    };
-
-    await this.sendPushNotification(userId, title, body, data);
-  }
-
-  // Send companion linked notification
-  async sendCompanionLinkedNotification(userId: string, companionName: string) {
-    const title = '👥 Companion Linked!';
-    const body = `${companionName} is now tracking your ride.`;
-    const data = {
-      type: 'companion_linked',
-      companionName,
-    };
-
-    await this.sendPushNotification(userId, title, body, data);
-  }
-
-  // Send feedback request notification
-  async sendFeedbackRequestNotification(userId: string, rideData: any) {
-    const title = '⭐ Rate Your Ride!';
-    const body = `How was your ride from ${rideData.from} to ${rideData.to}?`;
-    const data = {
-      type: 'feedback_request',
-      rideId: rideData.id,
-      from: rideData.from,
-      to: rideData.to,
-    };
-
-    await this.sendPushNotification(userId, title, body, data);
-  }
-
-  // Get user notifications
-  async getUserNotifications(userId: string, callback: (notifications: NotificationData[]) => void) {
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
-      where('read', '==', false)
+  // Test notification (for debugging)
+  async testNotification() {
+    return this.sendLocalNotification(
+      '🧪 Test Notification',
+      'This is a test notification to verify the system is working!',
+      { type: 'test' }
     );
-
-    return onSnapshot(q, (snapshot) => {
-      const notifications: NotificationData[] = [];
-      snapshot.forEach((doc) => {
-        notifications.push({
-          id: doc.id,
-          ...doc.data()
-        } as NotificationData);
-      });
-      
-      callback(notifications);
-    });
-  }
-
-  // Mark notification as read
-  async markNotificationAsRead(notificationId: string) {
-    try {
-      const notificationRef = doc(db, 'notifications', notificationId);
-      await updateDoc(notificationRef, {
-        read: true,
-        readAt: new Date(),
-      });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  }
-
-  // Clean up expired notifications
-  async cleanupExpiredNotifications() {
-    try {
-      const now = new Date();
-      const q = query(
-        collection(db, 'notifications'),
-        where('expiresAt', '<', now)
-      );
-
-      const snapshot = await getDocs(q);
-      const batch = db.batch();
-
-      snapshot.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      await batch.commit();
-    } catch (error) {
-      console.error('Error cleaning up expired notifications:', error);
-    }
-  }
-
-  // Cleanup method
-  cleanup() {
-    if (this.notificationListener) {
-      this.notificationListener.remove();
-    }
-    if (this.responseListener) {
-      this.responseListener.remove();
-    }
   }
 }
 

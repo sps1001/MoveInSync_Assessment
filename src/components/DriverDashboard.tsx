@@ -75,6 +75,27 @@ const DriverDashboard = () => {
     };
   }, [currentUserUID]);
 
+  // Real-time listener for driver status changes
+  useEffect(() => {
+    if (!currentUserUID) return;
+
+    const driverRef = doc(db, 'drivers', currentUserUID);
+    
+    const unsubscribe = onSnapshot(driverRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setDriverName(data.username || 'Driver');
+        setAvailability(data.status || 'unavailable');
+        setIsSwitchOn(data.status === 'available');
+        console.log(`🔄 Driver status updated: ${data.status}`);
+      } else {
+        console.warn('❌ No driver document found with this UID');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUserUID]);
+
   const handleToggleAvailability = async () => {
     if (!currentUserUID) return;
 

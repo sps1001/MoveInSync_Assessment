@@ -34,6 +34,7 @@ import Profile from './components/Profile';
 import GroupScreen from './components/GroupScreen';
 import MembersScreen from './components/MembersScreen';
 import AdminDashboard from './components/AdminDashboard';
+import AdminSetup from './components/AdminSetup';
 import CompanionUserRegistration from './components/CompanionUserRegistration';
 import CompanionDashboard from './components/CompanionDashboard';
 import RideSharing from './components/RideSharing';
@@ -85,6 +86,7 @@ export type RootStackParamList = {
   GroupDetailsScreen: undefined;
   Profile: undefined;
   AdminDashboard: undefined;
+  AdminSetup: undefined;
   CompanionUserRegistration: undefined;
   CompanionDashboard: undefined;
   RideSharing: {
@@ -184,6 +186,7 @@ const App = () => {
             <Stack.Screen name="GroupScreen" component={GroupScreen} options={{ title: 'Groups' }} />
             <Stack.Screen name="MembersScreen" component={MembersScreen} options={{ title: 'Members' }} />
             <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ title: 'Admin Dashboard' }} />
+            <Stack.Screen name="AdminSetup" component={AdminSetup} options={{ title: 'Admin Setup', headerShown: true }} />
             <Stack.Screen name="CompanionUserRegistration" component={CompanionUserRegistration} options={{ headerShown: false }} />
             <Stack.Screen name="CompanionDashboard" component={CompanionDashboard} options={{ headerShown: true, title: 'Companion Dashboard' }} />
             <Stack.Screen name="RideSharing" component={RideSharing} options={{ headerShown: true, title: 'Share Ride' }} />
